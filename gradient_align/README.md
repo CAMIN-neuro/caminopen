@@ -11,3 +11,4 @@
 *template_5_grad:* Control + ASD (ABIDE) → HCP \
 *template_6_grad:* Control (ABIDE) → HCP
   - For structural gradients, left and right hemispheres are provided separately
+  - .npy (for python) and .mat (for matlab) files are provided
