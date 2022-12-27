@@ -10,5 +10,4 @@
 *template_4_grad:* HCP \
 *template_5_grad:* Control + ASD (ABIDE) → HCP \
 *template_6_grad:* Control (ABIDE) → HCP
-
-* For structural gradients, left and right hemispheres are provided separately
+  - For structural gradients, left and right hemispheres are provided separately
