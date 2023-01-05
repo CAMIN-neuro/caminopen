@@ -1,3 +1,2 @@
-# caminopen
-- Open source from the CAMIN lab: https://by9433.wixsite.com/boyongpark
-- Visit additional tools: https://gitlab.com/by9433
+# Welcome to GAN-MAT
+Please read our [documentation](https://github.com/CAMIN-neuro/caminopen/blob/master/GAN-MAT/docs/build/html/index.html) before using our pipeline.
