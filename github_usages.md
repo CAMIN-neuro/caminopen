@@ -22,7 +22,7 @@ url은 원하는 레파지토리의 해당위치에서 복사할 수 있습니�
 - 주의할점은 맨처음에 올리는 파일은 -m "내용" 을 붙여 올려야 가능합니다.
 
 ## 4. git push origin branch
-git commit 까지 완료했다면 local에 있는 git은 업데이트가 되었지만, github에 있는 git은 아직 업데이트가 안되어 있습니다. 따라서 해당 명령어를 이용하여 github에 업데이트를 진행합니다.
+git commit 까지 완료했다면 local에 있는 git은 업데이트가 되었지만, github에 있는 git은 아직 업데이트가 안되어 있습니다. 따라서 해당 명령어를 이용하여 github에 업데이트를 진행합니다. 아이디는 계정명을 입력하면 되고, 토큰은 깃허브 설정에서 발급받을 수 있습니다.
 <p align="center"><img src="git_push.png" width="가로 사이즈" height="세로 사이즈"></p>
 
 branch는 다음부분에서 확인할 수 있습니다. 
