@@ -3,7 +3,7 @@
 
 ## 1. git clone
 해당 명령어는 기존에 있는 프로젝트를 local로 가져오는 명령어로, 변경된 데이터를 깃허브에 올리기전에 항상 실행해야 합니다. 
-<p align="center"><img src="https://github.com/CAMIN-neuro/caminopen/blob/master/figure/github/clone.png" width=800 height=300></p>
+<p align="center"><img src="https://github.com/CAMIN-neuro/caminopen/blob/master/figure/github/clone.png" width=1000 height=500></p>
 
 url은 원하는 레파지토리의 해당위치에서 복사할 수 있습니다.
 <p align="center"><img src="github_url.png" width="가로 사이즈" height="세로 사이즈"></p>
