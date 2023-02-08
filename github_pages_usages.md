@@ -10,7 +10,7 @@ Github Pages 사용법
 
 먼저 이후 생성되는 파일들을 한곳에 모아둘 root 디렉토리(docs)를 생성합니다. 그후 다음 명령어를 통해 기본 문서를 만듭니다. 여기서 소스코드가 들어가는 "source" 폴더와 html로 변환된 파일이 들어갈 "build" 폴더를 분리할지 합칠지 결정해야 합니다. 이번에는 별도로 관리하기 위해 y 를 입력하겠습니다.
 
-<p align="center"><img src="sphinx-quickstart" width=800 height=500></p>
+<p align="center"><img src="https://github.com/CAMIN-neuro/caminopen/blob/master/figure/pages/sphinx-quickstart.png" width=800 height=500></p>
 
 그리고 다음과 같이 프로젝트명, 저자, 버전을 입력합니다. 추후에 *conf.py* 파일에서 수정가능하니, 임시로 적어도 괜찮습니다.
 
