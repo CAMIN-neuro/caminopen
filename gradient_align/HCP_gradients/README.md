@@ -17,3 +17,9 @@
 *Vosdewael 200* \
 *Vosdewael 300* \
 *Vosdewael 400*
+
+* **Cautions** \
+*Please only use the first* \
+-- 3 gradients for FC \
+-- 2 gradients for MPC \
+-- 3 gradients for SC
