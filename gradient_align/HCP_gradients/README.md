@@ -3,7 +3,9 @@
 * **Multimodal dataset** \
 *Functional connectivity (FC)* \
 *Microstructural profile covariance (MPC)* \
-*Structural connectivity (SC)*
+*Structural connectivity (SC)* \
+-- LRcomb: consider left, right hemisphere simultaneously \
+-- LRseparate: consider left, right hemisphere separately (generate lh, rh gradients separately, and then integrate them)
 
 * **Parcellations** \
 *Glasser 360 (HCP multimodal parcellation)* \
