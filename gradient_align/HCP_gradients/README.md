@@ -7,6 +7,12 @@
 -- LRcomb: consider left, right hemisphere simultaneously \
 -- LRseparate: consider left, right hemisphere separately (generate lh, rh gradients separately, and then integrate them)
 
+* **Subject selection** \
+*S1200 release of HCP*\
+*Non-twins*\
+*Full MRI modalities (T1, T2, rs-fMRI, DWI)*\
+*No drug ingestion (Cocaine, THC, Opiates, Amphetamines, MethAmphetamine, Oxycontin)*
+
 * **Parcellations** \
 *Glasser 360 (HCP multimodal parcellation)* \
 *Schaefer 100* \
