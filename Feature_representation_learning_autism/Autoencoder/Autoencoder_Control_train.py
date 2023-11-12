@@ -1,6 +1,6 @@
 import os
-import skimage.io
-import skimage.transform
+#import skimage.io
+#import skimage.transform
 from scipy import io
 import numpy as np
 import pandas as pd
@@ -15,6 +15,8 @@ from torch import nn
 import ast
 from ast import literal_eval
 
+
+# load NYU & TCD
 path='/camin1/yrjang/Autism classification/abide2/diff/Schaefer_200/'
 file_list=os.listdir(path)
 file_list_py=[file for file in file_list if file.endswith('_DC.mat')]
@@ -24,6 +26,15 @@ for i in file_list_py:
     connmat=mat_file['diff_ConnMat']
     conZ_1r.append(connmat)
 conZ_1r=np.array(conZ_1r)
+
+# load sdsu
+sdsu = np.load('/home/yrjang/Autism classification/sdsu_file/sdsu_sym_matrix.npy')
+sdsu_age = np.load('/home/yrjang/Autism classification/sdsu_file/sdsu_age.npy')
+sdsu_dx = np.load('/home/yrjang/Autism classification/sdsu_file/sdsu_dx.npy')
+sdsu_sex = np.load('/home/yrjang/Autism classification/sdsu_file/sdsu_sex.npy')
+sdsu_site = np.full((57,),3)
+
+
 
 file=pd.read_excel('/camin1/yrjang/Autism classification/abide2/subjects.xlsx')
 
@@ -37,19 +48,28 @@ grp_ = np.where(grp=='ASD', 1, grp)
 grp_ = np.where(grp_=='CONTROL', 2, grp_)
 grp = grp_.astype('int64')
 
+grp = np.concatenate((grp,sdsu_dx))
+age = np.concatenate((age,sdsu_age))
+conZ_1r = np.concatenate((conZ_1r,sdsu),axis=0)
+
+
 sex_ = np.where(sex=='M', 1, sex)
 sex_ = np.where(sex_=='F', 2, sex_)
 sex = sex_.astype('int64')
+
+sex = np.concatenate((sex, sdsu_sex))
 
 site_ = np.where(site=='TCD', 1, site)
 site_ = np.where(site_=='NYU', 2, site_)
 site = site_.astype('int64')
 
+site = np.concatenate((site,sdsu_site))
+
 NumSubj = np.size(grp)
 
 NumROI=200
-ConnMatZ2 = np.zeros((np.size(file_list_py), NumROI,NumROI))
-ConnMatZ2_reg = np.zeros((np.size(file_list_py), NumROI,NumROI))
+ConnMatZ2 = np.zeros((NumSubj, NumROI,NumROI))
+ConnMatZ2_reg = np.zeros((NumSubj, NumROI,NumROI))
 
 for nr1 in range(0,NumROI):
     for nr2 in range(0,NumROI):
@@ -64,7 +84,7 @@ feat2=ConnMatZ2_reg
 #Flatten
 hemi=[]
 hemi2=[]
-for num in range(0,84):
+for num in range(0,len(feat2)):
     for Left in range(0,100):
         if i == 99:
             break
@@ -78,7 +98,17 @@ for num in range(0,84):
     hemi2.append(hemi)
     hemi=[]
 x=np.array(hemi2)
-df_con1=[x[i] for i in range(0,84)]
+df_con1=[x[i] for i in range(0,len(feat2))]
+
+sdsu_dx_str = []
+for i in sdsu_dx:
+    if i == 1:
+        sdsu_dx_str.append('ASD')
+    else:
+        sdsu_dx_str.append('CONTROL')
+
+df_sdsu = pd.DataFrame({'Gk_II': sdsu_dx_str, 'Ak_II':sdsu_age,'GENDER_II': sdsu_sex})
+file = pd.concat([file,df_sdsu],ignore_index=True)
 
 file['data']=df_con1
 
@@ -270,170 +300,166 @@ def validate(model, dataloader, layer):
 
 from copy import deepcopy
 from torch.optim import Adam, lr_scheduler
-cor_train_500 = []
-cor_val_500 = []
-for n in range(0,100):
-    # ASD / Control data split
-    file_asd = file[file['Gk_II'] == 'ASD']
-    file_con = file[file['Gk_II'] == 'CONTROL']
-
-    train1_asdf, val_asdf = train_test_split(file_asd, train_size=0.75, shuffle=True, random_state=n)
-    train_asdf, test_asdf = train_test_split(train1_asdf, train_size=0.75, shuffle=True, random_state=n)
-
-    train_asd_d_ = []
-    train_asd_d = train_asdf['data'].values
-    val_asd_d = val_asdf['data'].values
-    test_asd_d = test_asdf['data'].values
-
-    train1_conf, val_conf = train_test_split(file_con, train_size=0.75, shuffle=True, random_state=n)
-    train_conf, test_conf = train_test_split(train1_conf, train_size=0.75, shuffle=True, random_state=n)
-
-    train_con_d = train_conf['data'].values
-    val_con_d = val_conf['data'].values
-    test_con_d = test_conf['data'].values
-
-    # Data_loader
-    batch_size = 2
-    asd_train_loader = DataLoader(train_asd_d, batch_size=batch_size, shuffle=True, drop_last=True)
-    asd_val_loader = DataLoader(val_asd_d, batch_size=batch_size, shuffle=True, drop_last=True)
-
-    con_train_loader = DataLoader(train_con_d, batch_size=batch_size, shuffle=True, drop_last=True)
-    con_val_loader = DataLoader(val_con_d, batch_size=batch_size, shuffle=True, drop_last=True)
+# cor_train_500 = []
+# cor_val_500 = []
+#for n in range(0,100):
 
 
+# ASD / Control data split
+file_asd = file[file['Gk_II'] == 'ASD']
+file_con = file[file['Gk_II'] == 'CONTROL']
 
-    layer = 'AE'
+train1_asdf, val_asdf = train_test_split(file_asd, train_size=0.75, shuffle=True, random_state=3)
+train_asdf, test_asdf = train_test_split(train1_asdf, train_size=0.75, shuffle=True, random_state=3)
 
-    if layer == 'AE':
-        model = AutoEncoder().to(device='cuda') # AutoEncoder
+train_asd_d_ = []
+train_asd_d = train_asdf['data'].values
+val_asd_d = val_asdf['data'].values
+test_asd_d = test_asdf['data'].values
 
-    model_children = list(model.children())
+train1_conf, val_conf = train_test_split(file_con, train_size=0.75, shuffle=True, random_state=3)
+train_conf, test_conf = train_test_split(train1_conf, train_size=0.75, shuffle=True, random_state=3)
 
-    epochs = 500
-    lr = 0.0001
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+train_con_d = train_conf['data'].values
+val_con_d = val_conf['data'].values
+test_con_d = test_conf['data'].values
 
-    optimizer = torch.optim.ASGD(model.parameters(), lr=lr, weight_decay=0.1)
-    lr_decay = lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.95)
-    criterion = nn.MSELoss(reduction='sum')
+# Data_loader
+batch_size = 5
+asd_train_loader = DataLoader(train_asd_d, batch_size=batch_size, shuffle=True, drop_last=True)
+asd_val_loader = DataLoader(val_asd_d, batch_size=batch_size, shuffle=True, drop_last=True)
 
-    main_path = "/camin1/yrjang/Autism classification/Checkpoint_auto/model/cp-{epoch:04d}.ckpt"
-    save_path = join(main_path, 'log')
+con_train_loader = DataLoader(train_con_d, batch_size=batch_size, shuffle=True, drop_last=True)
+con_val_loader = DataLoader(val_con_d, batch_size=batch_size, shuffle=True, drop_last=True)
 
-    best_model = deepcopy(model)
-    best_val_loss = np.inf
 
-    train_loss_total = []
-    val_loss_total = []
-    recon_loss_total_train = []
-    reg_loss_total_train = []
-    recon_loss_total_valid = []
-    reg_loss_total_valid = []
 
-    for epoch in range(epochs):
-        print(f"Epoch {epoch + 1} of {epochs}")
-        train_epoch_loss, val_epoch_loss, x_train, x_hat_train, x_valid, x_hat_valid, recon_loss_list_train, recon_loss_list_valid, latent_train, latent_valid = fit(
-            model, con_train_loader, con_val_loader, layer, loss_show=True)
+layer = 'AE'
 
-        train_loss_total.append(train_epoch_loss)
-        val_loss_total.append(val_epoch_loss)
-        recon_loss_total_train.append(recon_loss_list_train)
-        recon_loss_total_valid.append(recon_loss_list_valid)
+if layer == 'AE':
+    model = AutoEncoder().to(device='cuda:0') # AutoEncoder
 
-        if val_epoch_loss < best_val_loss:
-            print('[Updated New Record!]')
-            best_val_loss = val_epoch_loss
-            best_model = deepcopy(model)
-            best_epoch = epoch
+model_children = list(model.children())
 
-            best_x_train = x_train
-            best_x_hat_train = x_hat_train
-            best_x_valid = x_valid
-            best_x_hat_valid = x_hat_valid
-        print('')
+epochs = 500
+lr = 0.0001
+device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
-    #if epoch > best_epoch + 50:
-    #    print('Stop!')
-    #    break
+optimizer = torch.optim.ASGD(model.parameters(), lr=lr, weight_decay=0.1)
+lr_decay = lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.95)
+criterion = nn.MSELoss(reduction='sum')
 
-        lr_decay.step()
+# main_path = "/camin1/yrjang/Autism classification/Checkpoint_auto/model_sdsu/cp-{epoch:04d}.ckpt"
+# save_path = join(main_path, 'log_c')
 
-    # torch.save(best_model.state_dict(), save_path + '/' + trial + '_best_AE_epoch%d.pkl' % best_epoch)
-    print("best AE epoch to %d" % (best_epoch + 1))
-    print("best AE val_loss to %.4f" % best_val_loss)
+best_model = deepcopy(model)
+best_val_loss = np.inf
 
-    #plt.plot(range(0,epoch+1), train_loss_total, 'r', label = 'Training loss')
-    #plt.plot(range(0,epoch+1), val_loss_total, 'b', label = 'validation loss')
-    #plt.show()
+train_loss_total = []
+val_loss_total = []
+recon_loss_total_train = []
+reg_loss_total_train = []
+recon_loss_total_valid = []
+reg_loss_total_valid = []
 
-    best_x_train_n=[]
-    best_x_hat_train_n=[]
-    for num in range(0,np.array(best_x_train).shape[0]):
-        best_x_train_n.append(best_x_train[num].tolist())
-        best_x_hat_train_n.append(best_x_hat_train[num].tolist())
+for epoch in range(epochs):
+    print(f"Epoch {epoch + 1} of {epochs}")
+    train_epoch_loss, val_epoch_loss, x_train, x_hat_train, x_valid, x_hat_valid, recon_loss_list_train, recon_loss_list_valid, latent_train, latent_valid = fit(
+        model, con_train_loader, con_val_loader, layer, loss_show=True)
 
-    best_x_val_n=[]
-    best_x_hat_val_n=[]
-    for num in range(0,np.array(best_x_valid).shape[0]):
-        best_x_val_n.append(best_x_valid[num].tolist())
-        best_x_hat_val_n.append(best_x_hat_valid[num].tolist())
+    train_loss_total.append(train_epoch_loss)
+    val_loss_total.append(val_epoch_loss)
+    recon_loss_total_train.append(recon_loss_list_train)
+    recon_loss_total_valid.append(recon_loss_list_valid)
 
-    import scipy.stats as stats
-    from sklearn.metrics import mean_absolute_error, r2_score
+    if val_epoch_loss < best_val_loss:
+        print('[Updated New Record!]')
+        best_val_loss = val_epoch_loss
+        best_model = deepcopy(model)
+        best_epoch = epoch
 
-    mean_cor=[]
-    mean_pvalue=[]
-    for num in range(0,np.array(best_x_train_n).shape[0]):
-        cor,p =stats.pearsonr(best_x_train_n[num],best_x_hat_train_n[num])
-        mean_cor.append(cor)
-        mean_pvalue.append(p)
-    cor_m = np.mean(mean_cor)
-    p_m=np.mean(mean_pvalue)
-    cor_train_500.append(cor_m)
+        best_x_train = x_train
+        best_x_hat_train = x_hat_train
+        best_x_valid = x_valid
+        best_x_hat_valid = x_hat_valid
+    print('')
 
-    print("----train-----")
-    print("correlation coefficient : ", cor_m, "p-value : ",p_m)
-    print("r2_score : ",r2_score(best_x_train_n,best_x_hat_train_n))
-    print("MAE : ",mean_absolute_error(best_x_train_n,best_x_hat_train_n))
-    print(cor_train_500)
+#if epoch > best_epoch + 50:
+#    print('Stop!')
+#    break
 
-    mean_cor_v=[]
-    mean_pvalue_v=[]
-    for num in range(0,np.array(best_x_val_n).shape[0]):
-        cor_v,p_v =stats.pearsonr(best_x_val_n[num],best_x_hat_val_n[num])
-        mean_cor_v.append(cor_v)
-        mean_pvalue_v.append(p_v)
-    cor_m_v = np.mean(mean_cor_v)
-    p_m_v=np.mean(mean_pvalue_v)
-    cor_val_500.append(cor_m_v)
+    lr_decay.step()
 
-    print("----validation-----")
-    print("correlation coefficient_valid : ", cor_m_v, "p-value_valid : ",p_m_v)
-    print("r2_score_valid : ",r2_score(best_x_val_n,best_x_hat_val_n))
-    print("MAE_valid : ",mean_absolute_error(best_x_val_n,best_x_hat_val_n))
-    print("total : ", n)
-    print(cor_val_500)
+#torch.save(best_model.state_dict(), save_path + '/'  + '_best_AE_epoch%d.pkl' % best_epoch)
+torch.save(best_model.state_dict(), '/camin1/yrjang/Autism classification/Checkpoint_auto/model/log_c/_best_AE_epoch%d.pkl' % best_epoch)
+print("best AE epoch to %d" % (best_epoch + 1))
+print("best AE val_loss to %.4f" % best_val_loss)
 
-print("------train-------")
-print("cor_train : ",cor_train_500)
-print("cor_train mean: ",np.mean(cor_train_500))
-print("cor_train std : ",np.std(cor_train_500))
-print("------validation------")
-print("cor_val : ", cor_val_500)
-print("cor_val mean: ",np.mean(cor_val_500))
-print("cor_val std : ",np.std(cor_val_500))
-
-print("-------end------")
-
-#y=x
-#plt.scatter(best_x_train_n[0],best_x_hat_train_n[0])
-#plt.plot(x,y)
-#plt.axis([-20000,20000,-20000,20000])
+#plt.plot(range(0,epoch+1), train_loss_total, 'r', label = 'Training loss')
+#plt.plot(range(0,epoch+1), val_loss_total, 'b', label = 'validation loss')
 #plt.show()
-#plt.scatter(best_x_val_n[0],best_x_hat_val_n[0])
-#plt.plot(x,y)
-#plt.axis([-20000,20000,-20000,20000])
-#plt.show()
+
+best_x_train_n=[]
+best_x_hat_train_n=[]
+for num in range(0,len(best_x_train)):
+    best_x_train_n.append(best_x_train[num].cpu().detach().numpy())
+    best_x_hat_train_n.append(best_x_hat_train[num].cpu().detach().numpy())
+
+best_x_val_n=[]
+best_x_hat_val_n=[]
+for num in range(0,len(best_x_valid)):
+    best_x_val_n.append(best_x_valid[num].cpu().detach().numpy())
+    best_x_hat_val_n.append(best_x_hat_valid[num].cpu().detach().numpy())
+
+import scipy.stats as stats
+from sklearn.metrics import mean_absolute_error, r2_score
+
+mean_cor=[]
+mean_pvalue=[]
+for num in range(0,np.array(best_x_train_n).shape[0]):
+    cor,p =stats.pearsonr(best_x_train_n[num],best_x_hat_train_n[num])
+    mean_cor.append(cor)
+    mean_pvalue.append(p)
+cor_m = np.mean(mean_cor)
+p_m=np.mean(mean_pvalue)
+#cor_train_500.append(cor_m)
+
+print("----train-----")
+print("correlation coefficient : ", cor_m, "p-value : ",p_m)
+print("r2_score : ",r2_score(best_x_train_n,best_x_hat_train_n))
+print("MAE : ",mean_absolute_error(best_x_train_n,best_x_hat_train_n))
+#print(cor_train_500)
+
+mean_cor_v=[]
+mean_pvalue_v=[]
+for num in range(0,np.array(best_x_val_n).shape[0]):
+    cor_v,p_v =stats.pearsonr(best_x_val_n[num],best_x_hat_val_n[num])
+    mean_cor_v.append(cor_v)
+    mean_pvalue_v.append(p_v)
+cor_m_v = np.mean(mean_cor_v)
+p_m_v=np.mean(mean_pvalue_v)
+#cor_val_500.append(cor_m_v)
+
+print("----validation-----")
+print("correlation coefficient_valid : ", cor_m_v, "p-value_valid : ",p_m_v)
+print("r2_score_valid : ",r2_score(best_x_val_n,best_x_hat_val_n))
+print("MAE_valid : ",mean_absolute_error(best_x_val_n,best_x_hat_val_n))
+
+print('')
+# print("total : ", n)
+# print(cor_val_500)
+#
+# print("------train-------")
+# print("cor_train : ",cor_train_500)
+# print("cor_train mean: ",np.mean(cor_train_500))
+# print("cor_train std : ",np.std(cor_train_500))
+# print("------validation------")
+# print("cor_val : ", cor_val_500)
+# print("cor_val mean: ",np.mean(cor_val_500))
+# print("cor_val std : ",np.std(cor_val_500))
+#
+# print("-------end------")
+
 
 
 
