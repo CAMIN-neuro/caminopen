@@ -1,6 +1,6 @@
 import os
-import skimage.io
-import skimage.transform
+#import skimage.io
+#import skimage.transform
 from scipy import io
 import numpy as np
 import pandas as pd
@@ -15,6 +15,26 @@ from torch import nn
 import ast
 from ast import literal_eval
 
+
+def calculate_icc(data_original, data_reconstructed):
+    # 각 관측치의 평균과 분산 계산
+    mean_orig = np.mean(data_original)
+    mean_recon = np.mean(data_reconstructed)
+    var_orig = np.var(data_original, ddof=1)
+    var_recon = np.var(data_reconstructed, ddof=1)
+
+    # 데이터 쌍의 공분산 계산
+    cov = np.cov(data_original, data_reconstructed, ddof=1)[0, 1]
+
+    # ICC 계산
+    num = cov
+    den = (var_orig + var_recon) / 2 + (mean_orig - mean_recon) ** 2
+    icc = num / den
+
+    return icc
+
+
+# load NYU & TCD
 path='/camin1/yrjang/Autism classification/abide2/diff/Schaefer_200/'
 file_list=os.listdir(path)
 file_list_py=[file for file in file_list if file.endswith('_DC.mat')]
@@ -24,6 +44,15 @@ for i in file_list_py:
     connmat=mat_file['diff_ConnMat']
     conZ_1r.append(connmat)
 conZ_1r=np.array(conZ_1r)
+
+# load sdsu
+sdsu = np.load('/home/yrjang/Autism classification/sdsu_file/sdsu_sym_matrix.npy')
+sdsu_age = np.load('/home/yrjang/Autism classification/sdsu_file/sdsu_age.npy')
+sdsu_dx = np.load('/home/yrjang/Autism classification/sdsu_file/sdsu_dx.npy')
+sdsu_sex = np.load('/home/yrjang/Autism classification/sdsu_file/sdsu_sex.npy')
+sdsu_site = np.full((57,),3)
+
+
 
 file=pd.read_excel('/camin1/yrjang/Autism classification/abide2/subjects.xlsx')
 
@@ -37,19 +66,28 @@ grp_ = np.where(grp=='ASD', 1, grp)
 grp_ = np.where(grp_=='CONTROL', 2, grp_)
 grp = grp_.astype('int64')
 
+grp = np.concatenate((grp,sdsu_dx))
+age = np.concatenate((age,sdsu_age))
+conZ_1r = np.concatenate((conZ_1r,sdsu),axis=0)
+
+
 sex_ = np.where(sex=='M', 1, sex)
 sex_ = np.where(sex_=='F', 2, sex_)
 sex = sex_.astype('int64')
+
+sex = np.concatenate((sex, sdsu_sex))
 
 site_ = np.where(site=='TCD', 1, site)
 site_ = np.where(site_=='NYU', 2, site_)
 site = site_.astype('int64')
 
+site = np.concatenate((site,sdsu_site))
+
 NumSubj = np.size(grp)
 
 NumROI=200
-ConnMatZ2 = np.zeros((np.size(file_list_py), NumROI,NumROI))
-ConnMatZ2_reg = np.zeros((np.size(file_list_py), NumROI,NumROI))
+ConnMatZ2 = np.zeros((NumSubj, NumROI,NumROI))
+ConnMatZ2_reg = np.zeros((NumSubj, NumROI,NumROI))
 
 for nr1 in range(0,NumROI):
     for nr2 in range(0,NumROI):
@@ -64,7 +102,7 @@ feat2=ConnMatZ2_reg
 #Flatten
 hemi=[]
 hemi2=[]
-for num in range(0,84):
+for num in range(0,len(feat2)):
     for Left in range(0,100):
         if i == 99:
             break
@@ -78,7 +116,17 @@ for num in range(0,84):
     hemi2.append(hemi)
     hemi=[]
 x=np.array(hemi2)
-df_con1=[x[i] for i in range(0,84)]
+df_con1=[x[i] for i in range(0,len(feat2))]
+
+sdsu_dx_str = []
+for i in sdsu_dx:
+    if i == 1:
+        sdsu_dx_str.append('ASD')
+    else:
+        sdsu_dx_str.append('CONTROL')
+
+df_sdsu = pd.DataFrame({'Gk_II': sdsu_dx_str, 'Ak_II': sdsu_age, 'GENDER_II': sdsu_sex})
+file = pd.concat([file,df_sdsu],ignore_index=True)
 
 file['data']=df_con1
 
@@ -216,28 +264,30 @@ from copy import deepcopy
 from torch.optim import Adam, lr_scheduler
 cor_test_500=[]
 p_test_500=[]
+
 for n in range(0,100):
+
     # ASD / Control data split
     file_asd = file[file['Gk_II'] == 'ASD']
     file_con = file[file['Gk_II'] == 'CONTROL']
 
-    train1_asdf, val_asdf = train_test_split(file_asd, train_size=0.75, shuffle=True, random_state=5)
-    train_asdf, test_asdf = train_test_split(train1_asdf, train_size=0.75, shuffle=True, random_state=5)
+    train1_asdf, val_asdf = train_test_split(file_asd, train_size=0.75, shuffle=True, random_state=n)
+    train_asdf, test_asdf = train_test_split(train1_asdf, train_size=0.75, shuffle=True, random_state=n)
 
     train_asd_d_ = []
     train_asd_d = train_asdf['data'].values
     val_asd_d = val_asdf['data'].values
     test_asd_d = test_asdf['data'].values
 
-    train1_conf, val_conf = train_test_split(file_con, train_size=0.75, shuffle=True, random_state=2)
-    train_conf, test_conf = train_test_split(train1_conf, train_size=0.75, shuffle=True, random_state=2)
+    train1_conf, val_conf = train_test_split(file_con, train_size=0.75, shuffle=True, random_state=n)
+    train_conf, test_conf = train_test_split(train1_conf, train_size=0.75, shuffle=True, random_state=n)
 
     train_con_d = train_conf['data'].values
     val_con_d = val_conf['data'].values
     test_con_d = test_conf['data'].values
 
     # Data_loader
-    batch_size = 2
+    batch_size = 5
     asd_train_loader = DataLoader(train_asd_d, batch_size=batch_size, shuffle=True, drop_last=True)
     asd_val_loader = DataLoader(val_asd_d, batch_size=batch_size, shuffle=True, drop_last=True)
     asd_test_loader = DataLoader(test_asd_d, batch_size=batch_size, shuffle=True, drop_last=True)
@@ -248,20 +298,21 @@ for n in range(0,100):
 
     layer = 'AE'
 
-    model = AutoEncoder().to(device='cuda')
+    model = AutoEncoder().to(device='cuda:0')
 
 
-    lr = 0.0001
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    lr = 0.00008
+    device = torch.device('cuda:0')
 
-    main_path = "/camin1/yrjang/Autism classification/Checkpoint_auto/model"
-    save_path = join(main_path, 'log_c')
+    # main_path = "/camin1/yrjang/Autism classification/Checkpoint_auto/model_sdsu/cp-{epoch:04d}.ckpt"
+    # save_path = join(main_path, 'log_c')
 
     optimizer = torch.optim.ASGD(model.parameters(), lr=lr, weight_decay=0.1)
     lr_decay = lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.95)
     criterion = nn.MSELoss(reduction='sum')
 
-    load_test_model = join(save_path,'_best_AE_epoch420.pkl')
+    # load_test_model = join(save_path,'_best_AE_epoch420.pkl')
+    load_test_model = '/camin1/yrjang/Autism classification/Checkpoint_auto/model/log_c/_best_AE_epoch392.pkl'
     model.load_state_dict(torch.load(load_test_model),strict=False)
 
 
@@ -272,7 +323,7 @@ for n in range(0,100):
     x_hat_test_n = []
     # x_n=[]
     # x_hat_n=[]
-    for i in range(0, 3):
+    for i in range(0, len(x_test)):
         x_n = []
         x_hat_n = []
         for num in range(0, 9900):
@@ -291,19 +342,25 @@ for n in range(0,100):
         cor, p = stats.pearsonr(x_test_n[num], x_hat_test_n[num])
         mean_cor.append(cor)
         mean_pvalue.append(p)
+        icc_value = calculate_icc(x_test_n[num], x_hat_test_n[num])
     cor_m = np.mean(mean_cor)
     p_m = np.mean(mean_pvalue)
 
     cor_test_500.append(cor_m)
     p_test_500.append(p_m)
+
+
     print("-------------------------------------")
     print(n)
     print("correlation coefficient : ", cor_m, "p-value : ", p_m)
     print("r2_score : ", r2_score(x_test_n,x_hat_test_n))
     print("MAE : ", mean_absolute_error(x_test_n, x_hat_test_n))
+   
 
-print("------test-------")
-print("cor_test : ",cor_test_500)
-print("cor_test mean: ",np.mean(cor_test_500))
-print("cor_test std : ",np.std(cor_test_500))
+# print("------test-------")
+# print("cor_test : ",cor_test_500)
+# print("cor_test mean: ",np.mean(cor_test_500))
+# print("cor_test std : ",np.std(cor_test_500))
+
+
 print("end")
