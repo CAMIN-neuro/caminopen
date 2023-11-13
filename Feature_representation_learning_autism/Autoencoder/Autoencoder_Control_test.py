@@ -17,16 +17,13 @@ from ast import literal_eval
 
 
 def calculate_icc(data_original, data_reconstructed):
-    # 각 관측치의 평균과 분산 계산
     mean_orig = np.mean(data_original)
     mean_recon = np.mean(data_reconstructed)
     var_orig = np.var(data_original, ddof=1)
     var_recon = np.var(data_reconstructed, ddof=1)
 
-    # 데이터 쌍의 공분산 계산
     cov = np.cov(data_original, data_reconstructed, ddof=1)[0, 1]
 
-    # ICC 계산
     num = cov
     den = (var_orig + var_recon) / 2 + (mean_orig - mean_recon) ** 2
     icc = num / den
@@ -147,7 +144,7 @@ fea5 = 200
 
 
 # LeakyReLU ReLU Tanh
-# Tanh 고정 제일 performance 좋음
+# Tanh: best performance
 
 class AutoEncoder(nn.Module):
     def __init__(self):
