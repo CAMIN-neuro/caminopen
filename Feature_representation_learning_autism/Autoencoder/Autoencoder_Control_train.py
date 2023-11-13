@@ -128,7 +128,7 @@ fea5 = 200
 
 
 # LeakyReLU ReLU Tanh
-# Tanh 고정 제일 performance 좋음
+# Tanh: best performance
 
 class AutoEncoder(nn.Module):
     def __init__(self):
